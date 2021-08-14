@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="/bootstrap.css">
+    <link rel="stylesheet" href="/style.css">
+    <script src="/jquery-3.4.1.js"></script>
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="/Game.js"></script>
+    <script src="/GameInit.js"></script>
+    <script src="/gamePage.js"></script>
+    <title>캐치마인드</title>
+</head>
+
+<body>
+    <% const nickname = loginData.nickname %>
+    <% const leader = data[0].leader %>
+    <div id="container" class="bg-light px-2 py-4">
+        <header>
+            <button id="makeroom-popup-btn" class="float-end btn btn-secondary">나가기</button>
+        </header>
+        <section id="game-page-section" class="mt-5 pt-3 px-2">
+            <div class="game-user-left">
+                <% for (let i = 0; i < 8; i += 2) { %>
+                    <div class="user">
+                        <div class="user-nickname">
+                            <% if (userData[i]) { %>
+                                <% if (userData[i].user_name == leader) { %>
+                                    <div class="leader">Room Leader</div>
+                                    <div class="nickname"><%= userData[i].user_name %></div>
+                                <% } else { %>
+                                    <div class="player">Nick name</div>
+                                    <div class="nickname"><%= userData[i].user_name %></div>
+                                <% } %>
+                            <% } else { %>
+                                <div class="player">Nick name</div>
+                                <div class="nickname"></div>
+                            <% } %>
+                        </div>
+                        <% if (userData[i]) { %>
+                            <div class="user-answer">
+                                정답
+                                <div class="cnt">0</div>
+                            </div>                        
+                        <% } else { %>
+                            <div class="user-answer"></div>
+                        <% } %>
+                    </div>
+                <% } %>
+            </div>
+            <div class="game-page">
+                <div class="hint-answer"></div>
+                <div id="game-canvas" class="position-relative">
+                    <canvas id="canvas" width="700" height="500"></canvas>
+                    <div class="now-round">
+                        <span class="text-warning"><b>Round </b></span>
+                        <span class="text-primary"><b> 1</b></span>
+                    </div>
+                </div>
+                <div class="color-picker mt-2 mb-4 d-flex justify-content-between">
+                    <div class="colors d-flex">
+                        <div class="color black" data-color="0"></div>
+                        <div class="color red" data-color="1"></div>
+                        <div class="color blue" data-color="2"></div>
+                        <div class="color green" data-color="3"></div>
+                        <div class="color yellow" data-color="4"></div>
+                        <div class="color white" data-color="5"></div>
+                        <div class="eraser" data-color="6">
+                            <img src="/eraser.png" alt="img" title="img">
+                        </div>
+                    </div>
+                    <div class="eraser-btns d-flex">
+                        <button id="eraseall-btn" class="btn"><b>전체지우기</b></button>
+                        <button id="givingup-btn" class="btn d-flex justify-content-around"><b>포</b><b>기</b></button>
+                    </div>
+                </div>
+                <div class="game-page-footer d-flex justify-content-around">
+                    <div class="time-score px-3 py-1 d-flex justify-content-around">
+                        <div class="time">
+                            <div class="w-100 h-100 d-flex justify-content-center align-items-center">
+                                <div class="time-m">2</div>
+                                <div class="time-c">:</div>
+                                <div class="time-s">20</div>
+                                <div class="time-ms">00</div>
+                            </div>
+                        </div>
+                        <div class="points">
+                            <b>POINTS</b>
+                            <div class="point">
+                                <div class="w-100 h-100 d-flex justify-content-end align-items-center px-3">
+                                    <p class="mb-0" id="point">0</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="chatting-box">
+                        <b>CHATTING</b>
+                        <div class="game-chatting input-group">
+                            <input type="text" class="form-control" id="game-chatting" autofocus>
+                            <button id="game-chatting-send" class="input-group-text">전송</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="game-user-right">
+                <% for (let i = 1; i < 8; i += 2) { %>
+                    <div class="user">
+                        <div class="user-nickname">
+                            <% if (userData[i]) { %>
+                                <% if (userData[i].user_name == leader) { %>
+                                    <div class="leader">Room Leader</div>
+                                    <div class="nickname"><%= userData[i].user_name %></div>
+                                <% } else { %>
+                                    <div class="player">Nick name</div>
+                                    <div class="nickname"><%= userData[i].user_name %></div>
+                                <% } %>
+                            <% } else { %>
+                                <div class="player">Nick name</div>
+                                <div class="nickname"></div>
+                            <% } %>
+                        </div>
+                        <% if (userData[i]) { %>
+                            <div class="user-answer">
+                                정답
+                                <div class="cnt">0</div>
+                            </div>                        
+                        <% } else { %>
+                            <div class="user-answer"></div>
+                        <% } %>
+                    </div>
+                <% } %>
+            </div>
+        </section>
+    </div>
+
+    <script>
+        const socket = new io();
+        const id = "<%= data[0].id %>";
+        const nickname = "<%= nickname %>";
+        const leader = "<%= leader %>";
+        const userData = JSON.parse('<%- JSON.stringify(userData) %>');
+
+        window.startBtnEvent = () => {
+            if (document.querySelector("#game-start-btn")) document.querySelector("#game-start-btn").remove();
+            if (nickname == leader && userData.length >= 2) {
+                const gameStartBtn = document.createElement("div");
+                gameStartBtn.id = "game-start-btn";
+                gameStartBtn.classList.add("btn", "btn-primary");
+                gameStartBtn.innerHTML = "게임 시작";
+                const gameCanvas = document.querySelector("#game-canvas");
+                gameCanvas.appendChild(gameStartBtn);
+                
+                gameStartBtn.addEventListener("click", async e => {
+                    await $.ajax({
+                        url: '/game/start',
+                        type: 'POST',
+                        data: { id },
+                        success: e => {
+                            if (e == "실패") return alert("없는 방이거나 DB 오류로 시작에 실패하였습니다.");
+                            else {
+                                gameStartBtn.remove();
+                                new GameInit(nickname, leader, userData);
+                            }
+                        }
+                    });
+                });
+            }
+        }
+        
+        startBtnEvent();
+
+        socket.on('game-start-information', data => {
+            data.id = id;
+            data.nickname = nickname;
+            data.userData = userData;
+            new Game(data);
+        });
+
+        socket.on('draw-image', data => {
+            const c = document.querySelector("#canvas");
+            const ctx = c.getContext('2d');
+            const image = new Image();
+            image.src = data.image;
+            ctx.drawImage(image, 0, 0, c.width, c.height);
+        });
+
+        // 채팅 이벤트
+        window.addEventListener("keydown", e => { if (e.keyCode == 13) chatting(); });
+        const sendBtn = document.querySelector("#game-chatting-send");
+        sendBtn.addEventListener("click", e => { chatting(); });
+
+        function chatting() {
+            const chatInput = document.querySelector("#game-chatting");
+            const value = chatInput.value.trim();
+            if (value === "") return;
+
+            socket.emit('game-chatting-send', { msg: value, nickname });
+            chatInput.value = "";
+        }
+
+        // 방 삭제
+        socket.on('remove-room-list', data => {
+            location.href = '/';
+        });
+
+        // 유저 접속
+        socket.on('room-user-update', data => {
+            location.reload();
+        });
+        
+        // 유저 나갔을 때
+        const getoutBtn = document.querySelector("#makeroom-popup-btn");
+        getoutBtn.addEventListener("click", e => {
+            if (nickname == leader) {
+                $.ajax({
+                    url: '/remove/room',
+                    type: 'POST',
+                    data: { id },
+                    success: e => {
+                        if (e == "실패") return alert("없는 방이거나 DB 오류로 삭제에 실패하였습니다.");
+                        else {
+                            socket.emit('remove-room', { id });
+                            location.href = '/';
+                        }
+                    }
+                });
+            } else {
+                $.ajax({
+                    url: '/getout/room',
+                    type: 'POST',
+                    data: { id, nickname },
+                    success: e => {
+                        if (e == "실패") return alert("DB 오류로 나가기에 실패하였습니다.");
+                        else {
+                            socket.emit('getout-room', { id, nickname });
+                            startBtnEvent();
+                            location.href = '/';
+                        }
+                    }
+                });
+            }
+        });
+
+        socket.on('getout-room-user', data => {
+            const idx = userData.findIndex(user => user.user_name == data.nickname);
+            userData.splice(idx, 1);
+            startBtnEvent();
+        });
+    </script>
+</body>
+
+</html>

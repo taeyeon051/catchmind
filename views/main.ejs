@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="/bootstrap.css">
+    <link rel="stylesheet" href="/style.css">
+    <script src="/jquery-3.4.1.js"></script>
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="/app.js"></script>
+    <title>캐치마인드</title>
+</head>
+
+<body>
+    <div id="container" class="bg-light p-4">
+        <header>
+            <button id="makeroom-popup-btn" class="btn btn-secondary">방 만들기</button>
+            <button id="participate-btn" class="btn btn-secondary">참여하기</button>
+            <button id="logout-btn" class="btn btn-secondary float-end">로그아웃</button>
+        </header>
+        <section id="main" class="mt-3 d-flex">
+            <div class="room-list w-75">
+                <div class="w-100 py-1">방 목록 ··· Room List</div>
+                <table class="table table-hover bg-white border mb-0">
+                    <thead>
+                        <tr>
+                            <th>No</th>
+                            <th>제목</th>
+                            <th>방장</th>
+                            <th>인원</th>
+                            <th>비고</th>
+                            <th>상태</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <% for (let i = 0; i < roomList.length; i++) { %>
+                            <% const roomPublic = roomList[i].public == "private" ? "비공개" : "공개" %>
+                            <tr data-idx="<%= roomList[i].id %>">
+                                <td><%= roomList[i].id %></td>
+                                <td><%= roomList[i].title %></td>
+                                <td><%= roomList[i].leader %></td>
+                                <td><%= roomList[i].personnel %></td>
+                                <td><%= roomPublic %></td>
+                                <td><%= roomList[i].state %></td>
+                                <td></td>
+                            </tr>
+                        <% } %>
+                    </tbody>
+                </table>
+            </div>
+            <div class="user-list w-25 ms-3">
+                <div class="w-100 py-1">이용자 목록 ··· User List</div>
+                <ul class="list bg-white mb-0 p-0" style="list-style: none;">
+                    <% for (let i = 0; i < userList.length; i++) { %>
+                        <li>
+                            <%= userList[i] %>
+                        </li>
+                    <% } %>
+                </ul>
+            </div>
+        </section>
+        <section id="chat" class="mt-3">
+            <div class="chatting-room">
+                <div class="chatting-room-title py-1">대화창 ··· Chatting Room</div>
+                <div class="chat-list list">
+                    <div class="chat-msg-header">
+                        ## [<%= loginData.user_id %>]님의 접속을 환영합니다 ##
+                    </div>
+                </div>
+                <div class="input-group p-2">
+                    <input type="text" id="chat-input" class="form-control" autofocus>
+                    <button class="input-group-text" id="chat-send-btn">전송</button>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <div class="popup" id="makeroom">
+        <div class="inner p-4">
+            <div>
+                <h4 class="text-center mb-3">방만들기</h4>
+            </div>
+            <div class="form">
+                <div class="mb-3 row">
+                    <label for="room-title" class="col-sm-2 col-form-label">방 제목</label>
+                    <div class="col-sm-10">
+                        <input type="text" name="title" class="form-control" id="room-title">
+                    </div>
+                </div>
+                <div class="mb-3 row">
+                    <label for="room-public" class="col-sm-2 col-form-label">공개여부</label>
+                    <div class="col-sm-10">
+                        <select id="room-public" name="public" class="form-select">
+                            <option value="public">공개</option>
+                            <option value="private">비공개</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="mb-3 row">
+                    <label for="room-password" class="col-sm-2 col-form-label">비밀번호</label>
+                    <div class="col-sm-10">
+                        <input type="text" name="password" class="form-control" id="room-password">
+                    </div>
+                </div>
+                <div class="mb-3 row">
+                    <label for="room-personnel" class="col-sm-2 col-form-label">게임인원</label>
+                    <div class="col-sm-10">
+                        <select id="room-personnel" name="personnel" class="form-select">
+                            <option value="4">4명</option>
+                            <option value="5">5명</option>
+                            <option value="6">6명</option>
+                            <option value="7">7명</option>
+                            <option value="8" selected>8명</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="w-25 mx-auto d-flex justify-content-between">
+                    <button id="make-room-btn" class="btn btn-primary">만들기</button>
+                    <button id="reset-btn" class="btn btn-primary">취소</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <% const nickname = loginData.nickname %>
+    <script>
+        const socket = new io();
+        const nickname = "<%= nickname %>";
+        socket.emit('user-add', { nickname });
+
+        // 로그아웃
+        const logoutBtn = document.querySelector("#logout-btn");
+        logoutBtn.addEventListener("click", e => {
+            socket.emit('user-remove', { nickname });
+            location.href = '/user/logout';
+        });
+
+        // 채팅 이벤트
+        const chatInput = document.querySelector("#chat-input");
+        const btnSend = document.querySelector("#chat-send-btn");
+        const list = document.querySelector(".chat-list");
+        
+        window.addEventListener("keydown", e => { if (e.keyCode == 13) btnSend.click(); });
+        btnSend.addEventListener("click", e => {
+            const msg = chatInput.value.trim();
+            if (msg == "") return;
+            socket.emit('send-msg', { msg, nickname });
+            chatInput.value = "";
+        });
+
+        // 채팅
+        socket.on('chat-msg', data => {
+            const div = document.createElement("div");
+            div.innerHTML = `${data.nickname} > ${data.msg}`;
+            if (data.nickname == nickname) div.classList.add("text-primary");
+            div.classList.add("chat-msg");
+            list.appendChild(div);
+            list.scrollTop = list.scrollHeight - 200;
+        });
+
+        // 방 목록
+        let nowSelect = null;
+        const trList = document.querySelectorAll("tr");
+        const table = document.querySelector(".table tbody");
+        socket.on('make-room', data => {
+            const tr = document.createElement("tr");
+            tr.dataset.idx = data[0].id;
+            const roomPublic = data[0] == "private" ? "비공개" : "공개";
+            tr.innerHTML =
+                `<td>${data[0].id}</td>
+                <td>${data[0].title}</td>
+                <td>${data[0].leader}</td>
+                <td>${data[0].personnel}</td>
+                <td>${roomPublic}</td>
+                <td>${data[0].state}</td>
+                <td></td>`;
+            table.appendChild(tr);
+
+            tr.addEventListener("click", e => {
+                trList.forEach(x => x.classList.remove("selected"));
+                e.currentTarget.classList.add("selected");
+                nowSelect = e.currentTarget.dataset.idx;
+            });
+        });
+
+        trList.forEach(list => {
+            list.addEventListener("click", e => {
+                trList.forEach(x => x.classList.remove("selected"));
+                e.currentTarget.classList.add("selected");
+                nowSelect = e.currentTarget.dataset.idx;
+            });
+        });
+
+        // 방 참여하기
+        const participateBtn = document.querySelector("#participate-btn");
+        participateBtn.addEventListener("click", async e => {
+            if (nowSelect != null) {
+                let publicCheck = "public";
+                let pwdCheck = false;
+                await $.ajax({
+                    url: '/private/check',
+                    type: 'POST',
+                    data: { id: nowSelect },
+                    success: e => {
+                        if (e == "실패") return alert("DB 오류로 인하여 방 참여에 실패하였습니다.");
+                        else publicCheck = e;
+                    }
+                });
+
+                if (publicCheck == "private") {
+                    const pwd = window.prompt('비밀번호를 입력해주세요.');
+                    await $.ajax({
+                        url: '/room/password/check',
+                        type: 'POST',
+                        data: { id: nowSelect, pwd },
+                        success: e => {
+                            if (e == "실패") alert("비밀번호가 틀렸습니다.");
+                            else pwdCheck = true;
+                        }
+                    });
+                }
+
+                if (publicCheck == "public" || pwdCheck) {
+                    await $.ajax({
+                        url: '/participate/room',
+                        type: 'POST',
+                        data: { id: nowSelect },
+                        success: e => {
+                            if (e.msg) return alert(e.msg);
+                            if (e == "실패") return alert("DB 오류로 인하여 방 입장에 실패하였습니다.");
+                            else {
+                                socket.emit('participate-room', { id: nowSelect });
+                                location.href = `/play/game?id=${nowSelect}`;
+                            }
+                        }
+                    });
+                }
+            }
+        });
+    </script>
+</body>
+
+</html>
