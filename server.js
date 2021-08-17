@@ -35,11 +35,11 @@ app.use(session({
     resave: false,
     saveUninitialized: true,
     store: new MySQLStore({
-        host: 'localhost',
+        host: 'www.yydhsoft.com',
         port: '3306',
-        user: 'root',
-        password: '',
-        database: 'catchmind'
+        user: 'skills01',
+        password: '1234',
+        database: 'skills01'
     })
 }));
 
@@ -174,18 +174,22 @@ app.post('/participate/room', (req, resp) => {
     const id = req.body.id;
     const sql = "SELECT * FROM rooms WHERE id = ?";
     conn.query(sql, [id], (err, results) => {
-        const nowPersonnel = results[0].personnel.split('/');
-        if (nowPersonnel[0] * 1 >= nowPersonnel[1] * 1) return resp.send({ msg: '방인원이 다 찼습니다.' });
-        if (results[0].state == "진행") return resp.send({ msg: '게임이 진행중입니다.' });
-        const userUpdateSql = "UPDATE users SET now_room = ? WHERE user_id = ?";
-        const userUpdate = conn.query(userUpdateSql, [id, req.session.loginData.user_id]);
-        if (userUpdate) {
-            const personnel = (nowPersonnel[0] * 1 + 1) + '/' + nowPersonnel[1];
-            const roomUpdateSql = "UPDATE rooms SET personnel = ? WHERE id = ?";
-            const roomUpdate = conn.query(roomUpdateSql, [personnel, id]);
-            if (roomUpdate) resp.send("성공")
-            else resp.send("실패");
-        } else resp.send("실패");
+        try {            
+            const nowPersonnel = results[0].personnel.split('/');
+            if (nowPersonnel[0] * 1 >= nowPersonnel[1] * 1) return resp.send({ msg: '방인원이 다 찼습니다.' });
+            if (results[0].state == "진행") return resp.send({ msg: '게임이 진행중입니다.' });
+            const userUpdateSql = "UPDATE users SET now_room = ? WHERE user_id = ?";
+            const userUpdate = conn.query(userUpdateSql, [id, req.session.loginData.user_id]);
+            if (userUpdate) {
+                const personnel = (nowPersonnel[0] * 1 + 1) + '/' + nowPersonnel[1];
+                const roomUpdateSql = "UPDATE rooms SET personnel = ? WHERE id = ?";
+                const roomUpdate = conn.query(roomUpdateSql, [personnel, id]);
+                if (roomUpdate) resp.send("성공")
+                else resp.send("실패");
+            } else resp.send("실패");
+        } catch (e) {
+            resp.send("실패");
+        }
     });
 });
 

@@ -122,7 +122,14 @@ class App {
             this.lengthLimit(password, 10);
         });
 
-        window.addEventListener("keydown", e => { if (e.keyCode == 13 && this.isPopup) this.makeRoom(); });
+        window.addEventListener("keydown", e => { 
+            if (e.keyCode == 13 && this.isPopup) this.makeRoom();
+            if (e.keyCode == 37) e.preventDefault();
+        });
+
+        const roomTitle = document.querySelector("#room-title");
+        $(roomTitle).on("paste", () => { return false; });
+
         const makeRoomBtn = document.querySelector("#make-room-btn");
         makeRoomBtn.addEventListener("click", e => this.makeRoom());
 
@@ -148,6 +155,9 @@ class App {
         const roomPublic = document.querySelector("#room-public").value;
         const pwd = document.querySelector("#room-password").value;
         const personnel = document.querySelector("#room-personnel").value;
+
+        if (title.trim() === "" || roomPublic.trim() === "" || personnel.trim() === "") return alert("빈 값이 있습니다.");
+        if (roomPublic == "private" && pwd.trim() === "") return alert("비밀번호를 입력해주세요.");
 
         $.ajax({
             url: '/make/room',

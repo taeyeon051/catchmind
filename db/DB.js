@@ -1,10 +1,10 @@
 const mysql = require('mysql');
 const db_info = {
-    host: 'localhost',
+    host: 'www.yydhsoft.com',
     port: '3306',
-    user: 'root',
-    password: '',
-    database: 'catchmind'
+    user: 'skills01',
+    password: '1234',
+    database: 'skills01'
 };
 
 module.exports = {

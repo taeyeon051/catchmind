@@ -37,7 +37,7 @@
                     </thead>
                     <tbody>
                         <% for (let i = 0; i < roomList.length; i++) { %>
-                            <% const roomPublic = roomList[i].public == "private" ? "비공개" : "공개" %>
+                            <% const roomPublic = roomList[i].public == "public" ? "공개" : "비공개" %>
                             <tr data-idx="<%= roomList[i].id %>">
                                 <td><%= roomList[i].id %></td>
                                 <td><%= roomList[i].title %></td>

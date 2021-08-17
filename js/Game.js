@@ -7,6 +7,7 @@ class Game {
         this.thick = 5;
         this.eraser = false;
         this.isDraw = false;
+        this.givingup = false;
         this.start = {};
         this.isGameOver = false;
 
@@ -103,6 +104,7 @@ class Game {
         const colorsBtn = document.querySelectorAll(".colors>div");
         colorsBtn.forEach(color => {
             color.addEventListener("click", e => {
+                this.eraser = false;
                 colorsBtn.forEach(x => x.classList.remove('selected'));
                 const idx = color.dataset.color;
                 if (idx == 6) this.eraser = true;
@@ -113,7 +115,10 @@ class Game {
 
         const givingupBtn = document.querySelector("#givingup-btn");
         givingupBtn.addEventListener("click", e => {
+            if (this.givingup) return;
+            this.givingup = true;
             this.nextRound();
+            setTimeout(() => { this.givingup = false;}, 1000);
         });
     }
 
@@ -273,7 +278,7 @@ class Game {
     }
 
     reset() {
-        const { canvas: c, ctx } = this;
+        const { canvas: c, ctx, socket } = this;
         ctx.fillStyle = '#fff';
         ctx.fillRect(0, 0, c.width, c.height);
         socket.emit('draw', { image: this.getImage() });

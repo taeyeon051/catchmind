@@ -37,6 +37,7 @@ class GameInit {
             }
         }
 
+        log(twentyList);
         socket.emit('game-start', { problemList: twentyList, sequence: this.sequence, leader });
     }
 }
